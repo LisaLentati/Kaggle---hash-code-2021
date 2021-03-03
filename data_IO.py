@@ -40,7 +40,7 @@ def write_output(our_schedule):
 
 if __name__ == '__main__':
     file_dir = 'hashcode.in'
-    edges, paths = read_data(file_dir)
+    edges, paths = read_input(file_dir)
     
 
 
