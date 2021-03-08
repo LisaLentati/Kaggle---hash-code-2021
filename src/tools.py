@@ -22,25 +22,16 @@ def add_edge_count_col(paths, df_edges):
     # we add the "counts" to the original df
     df_edges = pd.merge(df_edges, df_counts, how='left', on='name')
         
-    # return df_edges
+    return df_edges
 
 
-def create_random_node_order(df):
-    """Takes a dataframe and adds to it a column called 'order'.
-    The input df must have a column called 'to'
+def create_random_order(df):
+    """Takes a dataframe and adds to it a column called 'order'.    
     """
     
     rng = np.random.default_rng()
-
-    schedule_order = list()
-    
-    node_counts = df['to'].value_counts().reset_index().values
-    for node, counts in node_counts:
-
-        edges_order = rng.permutation(range(counts))    
-        schedule_order.append(list(edges_order))
-
-    df['order'] = schedule_order
+    df['order'] = df.groupby(by='to').apply(lambda x: pd.Series(rng.permutation(np.arange(len(x))))).values
+    return
 
 
 def less_paths(paths, n):
@@ -49,4 +40,6 @@ def less_paths(paths, n):
     new_paths = dict()
     for i in range(m):
         new_paths[i] = paths[i]
+
+    return new_paths
     
