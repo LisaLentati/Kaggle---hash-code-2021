@@ -2,12 +2,12 @@ import numpy as np
 
 
 def times_crossover(times_A, times_B): 
-    """ASSUMPTION: 
+    """ASSUMPTION: times_A, times_B are pd.Series
     """
     rng = np.random.default_rng()
 
-    times_min = list(map(lambda x, y: min(x,y), times_A, times_B))
-    times_max = list(map(lambda x, y: max(x,y), times_A, times_B))
+    times_min = list(map(lambda x, y: min(x,y), list(times_A), list(times_B)))
+    times_max = list(map(lambda x, y: max(x,y), list(times_A), list(times_B)))
 
     times_AB = map(lambda m, M: rng.choice(np.arange(m, M+1)), times_min, times_max)
 
