@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     file_dir = './data/hashcode.in'
 
-    df, _, _, _ = read_input(file_dir)
+    df, _, _, _, _ = read_input(file_dir)
 
     gen_0 = create_gen0(df, samples_gen0)
     print(gen_0[4].head(20))
