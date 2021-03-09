@@ -24,9 +24,12 @@ def read_input(file_dir):
 
     paths_dict = dict()
     next_road_dict = dict()
+    first_road = list()
 
     for id_car in range(n_paths): 
         line = my_file.readline().strip().split()
+        first_road.append([id_car, line[1]])
+
         paths_dict[id_car] = line[1:]
         
         line_helper = line[1:] + ['end']
@@ -49,7 +52,7 @@ def read_input(file_dir):
     df = df.sort_values(by=['to', 'from'])
 
 
-    return df, paths_dict, next_road_dict, time_simulation, bonus
+    return df, first_road, next_road_dict, time_simulation, bonus
 
 
 def add_edge_count_col(paths, df_edges):

@@ -1,39 +1,29 @@
 import numpy as np
+import pandas as pd
 
 
 class Simulation:
-    def __init__(self, simulation_time, used_edges, edge_lenght_df, bonus, paths_as_list, paths_as_next_road): 
+    def __init__(self, simulation_time, used_edges, edge_lenght_df, bonus, first_road, paths_as_next_road): 
 
         self.simulation_time = simulation_time   # int value
         self.used_edges = used_edges # list of roads
         self.edge_lenght = self.create_edge_lenght_dict(edge_lenght_df) # dict, each edge is associated with their length
+        self.edge_lenght['end'] = -1
         self.bonus = bonus # number of points for each car that reaches the end
 
-        self.paths_list = paths_as_list # a dict of lists, the paths of the cars 
         self.paths_next_road = paths_as_next_road # a dict of dicts, the paths of the cars
+        self.initial_state_df = self.create_initial_state(first_road)
+        self.green_lights = None
+    
+    
 
-        self.initial_state_cars_at_nodes = self.create_initial_state_nodes()
-        self.initial_state_cars_in_edges = self.create_initial_state_edges()
+    def create_initial_state(self, first_road):
+        df = pd.DataFrame(data=first_road, columns=['car_id', 'road'])
+        df['node_pos'] = df.groupby(by='road').transform(lambda x: pd.Series(range(len(x))))
+        df['road_pos'] = np.nan
 
+        return df
 
-    def create_initial_state_nodes(self,):
-        cars_at_nodes = dict()
-        for edge in self.used_edges:
-            cars_at_nodes[edge] = list()
-
-        for car_id in range(len(self.paths_list)):
-            path = self.paths_list[car_id]
-            first_road = path[0]
-            cars_at_nodes[first_road].append(car_id)
-
-        return cars_at_nodes
-
-    def create_initial_state_edges(self,): 
-        cars_in_edges = dict()
-        for edge in self.used_edges:
-            cars_in_edges[edge] = dict()
-        
-        return cars_in_edges
 
     def create_edge_lenght_dict(self, edge_lenght_df):
         my_dict = dict()
@@ -46,49 +36,42 @@ class Simulation:
 
         score=0
     
-        green_light_times = create_traffic_light_functions(schedule_df)
-        at_traffic_lights = self.initial_state_cars_at_nodes
-        in_roads = self.initial_state_cars_in_edges
-        
+        self.green_lights = create_traffic_light_functions(schedule_df)
+
+        df = self.initial_state_df
         for t in range(self.simulation_time): 
-            points = self.update_state(at_traffic_lights, in_roads, green_light_times, t)
-            score = score + points
-            print(t, score)
+            print(t)
+            self.update_state(df, t)
+
         return score    
 
-    def update_state(self, cars_at_nodes, cars_in_edges, is_green, time):
-        points = 0
+    def update_state(self, df, time):
 
-        for road in self.used_edges:
-            # first we move all cars_in_edges by one
-            for car in cars_in_edges[road].keys():
-                cars_in_edges[road][car] -= 1
+        df['is_green'] = df['road'].apply(lambda x: self.green_lights[x](time))
 
-            if is_green[road](time):   # if the traffic light on the road is green in this particular time
-                if cars_at_nodes[road]:  # if there is a car at the trafffic light that can pass
-                    crossing_car = cars_at_nodes[road].pop(0) # we let the car pass 
-                    next_road = self.paths_next_road[crossing_car][road] # we check the next road the car is taking
-
-                    if next_road == 'end':  # if the car has reached the end
-                        # give bonus points
-                        points = points + self.bonus
-                        points = points + (self.simulation_time - time)
-
-                    else: # if the car has not reached the end
-                        # we add it to the next road, with an indication of how many seconds the car will need 
-                        # to go through the road
-                        cars_in_edges[next_road][crossing_car] = self.edge_lenght[next_road]
-                        
+        # ALL CARS IN THE ROADS MOVE BY ONE
+        df['road_pos'] -= 1
+        mask_new_cars_at_node = df['road_pos']==-1
 
 
-            # if a car has finished an edges it is moved to the cars_at_nodes traffic light
-            for car in list(cars_in_edges[road].keys()):
-                if cars_in_edges[road][car] == 0:
-                    del cars_in_edges[road][car]
-                    cars_at_nodes[road].append(car)
+        # UPDATE FOR THE CARS THAT ARE CROSSING A TRAFFIC LIGHT
+        mask_cars_crossing = (df['node_pos'] == 0) & df['is_green']
+        df.loc[mask_cars_crossing, 'road'] = df.loc[mask_cars_crossing, ['car_id', 'road']].apply(lambda x: self.paths_next_road[x['car_id']][x['road']], axis=1)
+        df.loc[mask_cars_crossing, 'node_pos'] = np.nan
+        df.loc[mask_cars_crossing, 'road_pos'] = df.loc[mask_cars_crossing, 'road'].apply(lambda x: self.edge_lenght[x])
+        # UPDATE NODE POSITONS FOR CARS THAT ARE AT A GREEN TRAFFIC LIGHT
+        df.loc[df['is_green'], 'node_pos'] -= 1
 
-        return points
+        # WE TAKE AWAY THE ROAD POSITION FOR TO THE CARS THAT FINISHED TRAVELLING ON THE ROAD 
+        df.loc[mask_new_cars_at_node, 'road_pos'] = np.nan
 
+        # WE ASSIGN THE RIGHT NODE POSITION FOR THE CARS THAT FINISHED TRAVELLING ON THE ROAD. 
+        df['at_node'] = df['node_pos'].notnull()
+        node_pos_for_arriving_cars = dict(df.groupby(by='road')['at_node'].sum())
+        df.loc[mask_new_cars_at_node, 'node_pos'] = df.loc[mask_new_cars_at_node, 'road'].apply(lambda x: node_pos_for_arriving_cars[x])
+    
+        return 
+    
 
 def create_traffic_light_functions(schedule_times):
     
@@ -105,7 +88,7 @@ def create_traffic_light_functions(schedule_times):
             
             green_light[road_name] = create_green_light_func(offset, t, cycle_length)
             offset = offset + t
-
+        green_light['end'] = always_green
         
     return green_light
 
@@ -123,12 +106,15 @@ def create_green_light_func(offset, green_time, cycle):
     def green_light_fun(time): 
         x = np.mod(time, cycle)
 
-        if offset < x <= offset+green_time: 
+        if offset <= x < offset+green_time: 
             return True
         else:
             return False
 
     return green_light_fun
+
+def always_green(time):
+    return True
     
 
 
@@ -136,14 +122,15 @@ def create_green_light_func(offset, green_time, cycle):
 if __name__ == '__main__':
     from main import create_gen0
     from data_IO import read_input
+    from collections import Counter
 
     file_dir = './data/hashcode.in'
-    df, paths_dict, next_road_dict, time_simulation, bonus = read_input(file_dir)
+    df, first_road, next_road_dict, time_simulation, bonus = read_input(file_dir)
     
     samples_gen0 = 3
     gen_0 = create_gen0(df, samples_gen0)    
     schedule_df = gen_0[2]  # I choose the 3rd schedule to do the simulation on it
 
-    simulation = Simulation(time_simulation, df['name'].values, df[['name', 'lenght']], bonus, paths_dict, next_road_dict)
+    simulation = Simulation(time_simulation, df['name'].values, df[['name', 'lenght']], bonus, first_road, next_road_dict)
 
     simulation.evaluate_schedule(schedule_df)
