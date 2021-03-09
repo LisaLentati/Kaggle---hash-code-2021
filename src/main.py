@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 from data_IO import read_input
-from tools import add_edge_count_col, create_random_order, less_paths
+from tools import create_random_order
 from genetic_alg import times_crossover, order_crossover
 
 
