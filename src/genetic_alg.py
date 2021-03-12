@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 
 def times_crossover(times_A, times_B): 
     """ASSUMPTION: times_A, times_B are pd.Series
@@ -28,12 +28,12 @@ def order_crossover1(order_A, order_B):
     """ASSUMPTION: order_A and order_B are dataframes.
     """
     rng = np.random.default_rng()
-    df = pd.DataFrame({'node': order_A['node'].values, 'order_a':order_A['order'].values, 
+    df = pd.DataFrame({'to': order_A['to'].values, 'order_a':order_A['order'].values, 
                        'order_b': order_B['order'].values})
 
     df['order'] = df.groupby(by='to').apply(lambda x: order_crossover_node1(x['order_a'], x['order_b'], rng)).values
         
-    return df[['node', 'order']]
+    return df[ 'order']
 
 def order_crossover_node1(order_A, order_B, rng):
     """
