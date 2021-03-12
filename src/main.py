@@ -3,7 +3,6 @@ from multiprocessing import Pool
 import time
 import numpy as np
 
-from data_IO import read_input
 from tools import create_random_order
 from genetic_alg import times_crossover, order_crossover
 
@@ -34,16 +33,25 @@ def create_gen0(df, samples):
 
 
 if __name__ == '__main__':
+    from data_IO import read_input
+    import time
 
+    x0 = time.time()
+    file_dir = './data/hashcode.in'
+    df, first_road, next_road_dict, time_simulation, bonus = read_input(file_dir)
+    simulation = Simulation(time_simulation, df['name'].values, df[['name', 'lenght']], bonus, first_road, next_road_dict)
+
+    samples_gen0 = 40
+    gen_0 = create_gen0(df, samples_gen0)    
+    schedule_df = gen_0[2]  # I choose the 3rd schedule to do the simulation on it
+    x2 = time.time()
+    print(np.round(x2-x1))
+
+    simulation.evaluate_schedule(schedule_df)
+    x3 = time.time()
+    print(np.round(x3-x2))
     samples_gen0 = 8
 
-    file_dir = './data/hashcode.in'
-
-    df, _, _, _, _ = read_input(file_dir)
-
-    gen_0 = create_gen0(df, samples_gen0)
-    print(gen_0[4].head(20))
-    
 
     # gen0_scores = list()
     # for i in range(samples_gen0):

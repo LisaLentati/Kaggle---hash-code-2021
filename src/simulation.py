@@ -14,16 +14,14 @@ class Simulation:
         self.paths_next_road = paths_as_next_road # a dict of dicts, the paths of the cars
         self.initial_state_df = self.create_initial_state(first_road)
         self.green_lights = None
-    
-    
-
+      
     def create_initial_state(self, first_road):
         df = pd.DataFrame(data=first_road, columns=['car_id', 'road'])
+        df = df.sort_values(by='car_id')
         df['node_pos'] = df.groupby(by='road').transform(lambda x: pd.Series(range(len(x))))
         df['road_pos'] = np.nan
 
         return df
-
 
     def create_edge_lenght_dict(self, edge_lenght_df):
         my_dict = dict()
@@ -34,15 +32,16 @@ class Simulation:
 
     def evaluate_schedule(self, schedule_df):
 
-        score=0
     
         self.green_lights = create_traffic_light_functions(schedule_df)
 
         df = self.initial_state_df
         for t in range(self.simulation_time): 
-            print(t)
             self.update_state(df, t)
 
+        mask = df['road'] == 'end'
+
+        score = sum(mask)*self.bonus +  (-1)*sum(df.loc[mask,'road_pos'])
         return score    
 
     def update_state(self, df, time):
@@ -62,7 +61,7 @@ class Simulation:
         # UPDATE NODE POSITONS FOR CARS THAT ARE AT A GREEN TRAFFIC LIGHT
         df.loc[df['is_green'], 'node_pos'] -= 1
 
-        # WE TAKE AWAY THE ROAD POSITION FOR TO THE CARS THAT FINISHED TRAVELLING ON THE ROAD 
+        # WE TAKE AWAY THE ROAD POSITION FOR THE CARS THAT FINISHED TRAVELLING ON THE ROAD 
         df.loc[mask_new_cars_at_node, 'road_pos'] = np.nan
 
         # WE ASSIGN THE RIGHT NODE POSITION FOR THE CARS THAT FINISHED TRAVELLING ON THE ROAD. 
@@ -113,6 +112,7 @@ def create_green_light_func(offset, green_time, cycle):
 
     return green_light_fun
 
+
 def always_green(time):
     return True
     
@@ -123,14 +123,21 @@ if __name__ == '__main__':
     from main import create_gen0
     from data_IO import read_input
     from collections import Counter
+    import time
 
+    x0 = time.time()
     file_dir = './data/hashcode.in'
     df, first_road, next_road_dict, time_simulation, bonus = read_input(file_dir)
-    
+    simulation = Simulation(time_simulation, df['name'].values, df[['name', 'lenght']], bonus, first_road, next_road_dict)
+    x1 = time.time()
+    print(np.round(x1-x0))
+
     samples_gen0 = 3
     gen_0 = create_gen0(df, samples_gen0)    
     schedule_df = gen_0[2]  # I choose the 3rd schedule to do the simulation on it
-
-    simulation = Simulation(time_simulation, df['name'].values, df[['name', 'lenght']], bonus, first_road, next_road_dict)
+    x2 = time.time()
+    print(np.round(x2-x1))
 
     simulation.evaluate_schedule(schedule_df)
+    x3 = time.time()
+    print(np.round(x3-x2))
