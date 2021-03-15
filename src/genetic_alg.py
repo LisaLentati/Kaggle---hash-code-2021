@@ -33,7 +33,7 @@ def order_crossover1(order_A, order_B):
 
     df['order'] = df.groupby(by='to').apply(lambda x: order_crossover_node1(x['order_a'], x['order_b'], rng)).values
         
-    return df[ 'order']
+    return df[ 'order'].values
 
 def order_crossover_node1(order_A, order_B, rng):
     """
@@ -49,7 +49,14 @@ def order_crossover_node1(order_A, order_B, rng):
 
     new_list = list_B.copy()
     for edge in list_AB:
-        new_list.remove(edge)    
+        try:
+            new_list.remove(edge)
+        except:
+            print("EXCEPT")
+            print(edge)
+            print(new_list)
+            print(order_A, order_B)  
+            break  
     
     return pd.Series(list_AB + new_list)
 

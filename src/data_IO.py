@@ -52,7 +52,7 @@ def read_input(file_dir):
     df = df.sort_values(by=['to', 'from'])
 
 
-    return df, first_road, next_road_dict, time_simulation, bonus
+    return df, first_road, next_road_dict, time_simulation, bonus, paths_dict
 
 
 def add_edge_count_col(paths, df_edges):

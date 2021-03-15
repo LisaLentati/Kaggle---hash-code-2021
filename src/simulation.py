@@ -115,18 +115,18 @@ if __name__ == '__main__':
 
     x0 = time.time()
     file_dir = './data/hashcode.in'
-    df, first_road, next_road_dict, time_simulation, bonus = read_input(file_dir)
+    df, first_road, next_road_dict, time_simulation, bonus, paths_dict = read_input(file_dir)
     edge_lenght = create_edge_lenght_dict(df[['name', 'lenght']])
     edge_lenght['end'] = -1
 
     x1 = time.time()
     samples_gen0 = 3
     gen_0 = create_gen0(df, samples_gen0)    
-    schedule_df = gen_0[2]  # I choose the 3rd schedule to do the simulation on it
+    schedule_df = gen_0[0]  # I choose the 3rd schedule to do the simulation on it
     x2 = time.time()
     print(np.round(x2-x1))
 
-    a =evaluate_schedule(schedule_df, first_road, bonus, time_simulation, next_road_dict, edge_lenght)
+    a = evaluate_schedule(schedule_df, first_road, bonus, time_simulation, next_road_dict, edge_lenght)
     print(a)
     x3 = time.time()
     print(np.round(x3-x2))

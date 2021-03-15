@@ -41,6 +41,7 @@ if __name__ == '__main__':
     from data_IO import read_input
     from simulation import create_edge_lenght_dict, evaluate_schedule
     import time
+    import os
 
     file_dir = './data/hashcode.in'
     df, first_road, next_road_dict, time_simulation, bonus = read_input(file_dir)
@@ -49,23 +50,44 @@ if __name__ == '__main__':
     edge_lenght = create_edge_lenght_dict(df[['name', 'lenght']])
     edge_lenght['end'] = -1
 
-    samples_gen0 = 40
-    gen_0 = create_gen0(df, samples_gen0)   
+    times_min = df_skeleton.copy()
+    times_min['time'] = [1]*len(df)
+    times_max = df_skeleton.copy()
+    times_max['time'] = df['count'].values
+
+    create_random_order(times_min)
+    create_random_order(times_max)
 
     eval_sched = partial(evaluate_schedule, first_road=first_road, bonus=bonus, simulation_time=time_simulation, paths_next_road=next_road_dict, edge_lenght=edge_lenght)
 
+    results_gen_0 = list()
+    gen_0 = [times_min, times_max]
+
     p = Pool() 
+
     results_gen_0 = p.map(eval_sched, gen_0)
     p.close()
     p.join()
 
-    for i in range(len(gen_0)):
-        dff = gen_0[i]
-        name = '0_' + str(i) + '_' + str(int(results_gen_1[i])) + '.csv'
-        dff.to_csv(name, index=False)
+
+    df_directories = os.listdir("./trial1/")
+    for j in range(10):
+        mask = list(map(lambda x: x[:4]=='7_' + str(j) + '_', df_directories) )
+        
+        dir_file = np.array(df_directories)[mask][0]
+        score = int(float(dir_file[4:-4]))
+        gen_0.append(pd.read_csv("./trial1/" + dir_file))
+        results_gen_0.append(score)
+
+    for j in range(10,14):
+        mask = list(map(lambda x: x[:4]=='7_' + str(j), df_directories))
+        dir_file = np.array(df_directories)[mask][0]
+        score = int(float(dir_file[5:-4]))
+        gen_0.append(pd.read_csv("./trial1/" + dir_file))
+        results_gen_0.append(score)
 
 
-    generations_info = [(1,15, 50), (2, 20, 20), (3, 12, 18), (4, 6, 14), (5, 6, 14), (6, 6, 14), (7, 6, 14)]
+    generations_info = [(8, 16, 50), (9, 10, 20), (10, 10, 20)]
 
     for gen_info in generations_info:
         idx, to_keep, to_create = gen_info
