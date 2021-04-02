@@ -1,5 +1,5 @@
 import pandas as pd
-from collections import Counter
+from tools import add_edge_count_col
 
 def read_input(file_dir):
 
@@ -22,28 +22,17 @@ def read_input(file_dir):
     df_edges['to'] = pd.to_numeric(df_edges['to'])
     df_edges['lenght'] = pd.to_numeric(df_edges['lenght'])
 
-    paths_dict = dict()
-    next_road_dict = dict()
-    first_road = list()
+    paths = dict()
 
     for id_car in range(n_paths): 
         line = my_file.readline().strip().split()
-        first_road.append([id_car, line[1]])
 
-        paths_dict[id_car] = line[1:]
+        paths[id_car] = line[1:]
         
-        line_helper = line[1:] + ['end']
-
-        path_next_road = dict()
-        for i in range(len(line)-1): 
-            path_next_road[line_helper[i]] = line_helper[i+1]
-
-        next_road_dict[id_car] = path_next_road
-
     my_file.close
 
 
-    df = add_edge_count_col(paths_dict, df_edges)
+    df = add_edge_count_col(paths, df_edges)
 
     # consider only used edges
     df = df.loc[df['count'] > 0]
@@ -51,40 +40,8 @@ def read_input(file_dir):
 
     df = df.sort_values(by=['to', 'from'])
 
+    return df, paths, time_simulation, bonus
 
-    return df, first_road, next_road_dict, time_simulation, bonus, paths_dict
-
-
-def add_edge_count_col(paths, df_edges):
-    """Adds the column 'counts' to df_edges. Indicating how many times each edge 
-    appears in paths (i.e. a car goes through the edge).
-    Return a df for which 'counts' > 0
-    """
-
-    # we flatten out all the paths into paths_list
-    paths_list = list()
-    for i in paths.keys():
-        paths_list += paths[i]
-
-    # we count the different elements of paths_list and create a pd.Series of it
-    c = dict(Counter(paths_list))
-    df_counts = pd.Series(c).reset_index(name='count')
-    df_counts = df_counts.rename(columns={'index': 'name'})
-
-    # we add the "counts" to the original df
-    df_edges = pd.merge(df_edges, df_counts, how='left', on='name')
-        
-    return df_edges
-
-
-def less_paths(paths, n):
-    m = min(n, len(paths))
-
-    new_paths = dict()
-    for i in range(m):
-        new_paths[i] = paths[i]
-
-    return new_paths
     
 def write_output(our_schedule):
 
